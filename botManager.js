@@ -9,7 +9,16 @@ function startBot(clientConfig){
     if(activeBots[clientConfig.clientId]) return
 
     const client = new Client({
-        authStrategy: new LocalAuth({ clientId: clientConfig.clientId })
+        authStrategy: new LocalAuth({
+            clientId: clientConfig.clientId
+        }),
+        puppeteer: {
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
+            args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox"
+            ]
+        }
     })
 
     client.on("qr", qr => {
@@ -28,27 +37,25 @@ function startBot(clientConfig){
         const user = msg.from
         let memory = loadMemory(user)
 
-        // Count user messages
         memory.count = (memory.count || 0) + 1
 
-        // Trigger word reply
         if(msg.body.toLowerCase() === clientConfig.trigger){
             await client.sendMessage(user, clientConfig.welcome)
         }
 
-        // Menu example
         if(msg.body.toLowerCase() === "menu"){
-            await client.sendMessage(user,
+            await client.sendMessage(
+                user,
                 "1️⃣ Products\n2️⃣ Support\n3️⃣ Pricing"
             )
         }
 
-        // Save memory
         saveMemory(user, memory)
 
     })
 
     client.initialize()
+
     activeBots[clientConfig.clientId] = client
 }
 
