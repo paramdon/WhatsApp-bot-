@@ -1,28 +1,42 @@
-const fs = require("fs")
-const path = require("path")
+// memory.js - stores memory per client & user to avoid collisions
+const fs = require("fs");
+const path = require("path");
 
-const MEMORY_DIR = path.join(__dirname, "memory")
+const BASE = path.join(__dirname, "memory"); // ensure exists
+if (!fs.existsSync(BASE)) fs.mkdirSync(BASE, { recursive: true });
 
-if (!fs.existsSync(MEMORY_DIR)) {
-  fs.mkdirSync(MEMORY_DIR)
+function safeName(s) {
+  // clientId + userNumber -> filename
+  return (s || "").replace(/[^a-z0-9-_]/gi, "_");
 }
 
-function loadMemory(user) {
+function memoryPath(clientId, userNumber) {
+  const filename = `${safeName(clientId)}__${safeName(userNumber)}.json`;
+  return path.join(BASE, filename);
+}
 
-  const file = path.join(MEMORY_DIR, user + ".json")
-
+function loadMemory(clientId, userNumber) {
+  const p = memoryPath(clientId, userNumber);
   try {
-    return JSON.parse(fs.readFileSync(file))
+    return JSON.parse(fs.readFileSync(p, "utf8"));
   } catch {
-    return {}
+    return { messages: [] };
   }
 }
 
-function saveMemory(user, data) {
-
-  const file = path.join(MEMORY_DIR, user + ".json")
-
-  fs.writeFileSync(file, JSON.stringify(data, null, 2))
+function saveMemory(clientId, userNumber, obj) {
+  const p = memoryPath(clientId, userNumber);
+  fs.writeFileSync(p, JSON.stringify(obj, null, 2), "utf8");
 }
 
-module.exports = { loadMemory, saveMemory }
+function appendMemory(clientId, userNumber, role, text) {
+  const mem = loadMemory(clientId, userNumber);
+  mem.messages = mem.messages || [];
+  mem.messages.push({ role, text, time: Date.now() });
+  // keep max ~12 messages
+  if (mem.messages.length > 12) mem.messages = mem.messages.slice(-12);
+  saveMemory(clientId, userNumber, mem);
+}
+
+// exported helpers
+module.exports = { loadMemory, saveMemory, appendMemory };
