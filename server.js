@@ -7,38 +7,34 @@ const app = express()
 app.use(express.json())
 
 const PORT = process.env.PORT || 3000
+
 const DB_DIR = path.join(__dirname, "database")
 const DB = path.join(DB_DIR, "clients.json")
 
-// ensure database folder exists
 if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR)
 }
 
-// ensure file exists
 if (!fs.existsSync(DB)) {
   fs.writeFileSync(DB, "[]")
 }
 
-// Read clients
-function readClients(){
-  try{
+function readClients() {
+  try {
     return JSON.parse(fs.readFileSync(DB))
   } catch {
     return []
   }
 }
 
-// Save clients
-function saveClients(data){
+function saveClients(data) {
   fs.writeFileSync(DB, JSON.stringify(data, null, 2))
 }
 
-// Add client API
-app.post("/add-client", (req,res)=>{
+app.post("/add-client", (req, res) => {
   const { clientId, trigger, welcome } = req.body
 
-  let clients = readClients()
+  const clients = readClients()
 
   const client = {
     clientId,
@@ -50,46 +46,41 @@ app.post("/add-client", (req,res)=>{
   clients.push(client)
   saveClients(clients)
 
-  // start bot
   startBot(client)
 
-  res.json({status:"Client added & bot started"})
+  res.json({ status: "Client added and bot started" })
 })
 
-// Get all clients
-app.get("/clients",(req,res)=>{
+app.get("/clients", (req, res) => {
   res.json(readClients())
 })
 
-// Toggle bot
-app.post("/bot/toggle",(req,res)=>{
+app.post("/bot/toggle", (req, res) => {
   const { clientId, status } = req.body
 
   let clients = readClients()
-  const client = clients.find(c=>c.clientId===clientId)
+  const client = clients.find(c => c.clientId === clientId)
 
-  if(client){
+  if (client) {
     client.botStatus = status
   }
 
   saveClients(clients)
 
-  res.json({status:"Bot status updated"})
+  res.json({ status: "Bot status updated" })
 })
 
-
-// START EXISTING BOTS ON SERVER START
-function startExistingBots(){
+function startExistingBots() {
   const clients = readClients()
 
-  clients.forEach(client=>{
-    if(client.botStatus){
+  clients.forEach(client => {
+    if (client.botStatus) {
       startBot(client)
     }
   })
 }
 
-app.listen(PORT, ()=>{
+app.listen(PORT, () => {
   console.log(`Admin API running on port ${PORT}`)
   startExistingBots()
 })
